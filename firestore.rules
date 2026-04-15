@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: patients
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (required, immutable) - ID do usuário dono
+    //   - name: string (required, max 100 chars)
+    //   - age: number (required, 0-120)
+    //   - gender: string (required, male/female)
+    //   - weight: number (required, 2-500)
+    //   - height: number (required, 50-250)
+    //   - activityFactor: number (required, 1.0-2.5)
+    //   - medicalHistory: string (optional, max 1000 chars)
+    //   - allergies: string (optional, max 500 chars)
+    //   - intolerances: string (optional, max 500 chars)
+    //   - createdAt: timestamp (required, immutable)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "relf_s@yahoo.com.br" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isValidPatient(data) {
+      return data.keys().hasAll(['uid', 'name', 'age', 'gender', 'weight', 'height', 'activityFactor', 'createdAt']) &&
+             data.uid is string &&
+             data.name is string && data.name.size() <= 100 &&
+             data.age is number && data.age >= 0 && data.age <= 120 &&
+             data.gender in ['male', 'female'] &&
+             data.weight is number && data.weight >= 2 && data.weight <= 500 &&
+             data.height is number && data.height >= 50 && data.height <= 250 &&
+             data.activityFactor is number && data.activityFactor >= 1.0 && data.activityFactor <= 2.5 &&
+             (!('goalType' in data) || data.goalType in ['loss', 'gain', 'maintenance']) &&
+             (!('goalKcal' in data) || data.goalKcal is number) &&
+             data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user';
+      allow update: if isAuthenticated() && (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+    }
+
+    match /patients/{patientId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      
+      allow create: if isAuthenticated() && 
+                      isValidPatient(request.resource.data) && 
+                      request.resource.data.uid == request.auth.uid;
+      
+      allow update: if isAuthenticated() && 
+                      (isOwner(resource.data.uid) || isAdmin()) &&
+                      isValidPatient(request.resource.data) &&
+                      request.resource.data.uid == resource.data.uid &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+      
+      allow delete: if isAuthenticated() && (isOwner(resource.data.uid) || isAdmin());
+    }
+  }
+}

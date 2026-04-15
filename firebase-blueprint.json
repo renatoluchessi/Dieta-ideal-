@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "Patient": {
+      "title": "Patient",
+      "description": "Dados cadastrais e clínicos do paciente",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "ID do usuário dono do perfil" },
+        "name": { "type": "string", "description": "Nome completo" },
+        "age": { "type": "number", "description": "Idade em anos" },
+        "gender": { "type": "string", "enum": ["male", "female"], "description": "Sexo biológico" },
+        "weight": { "type": "number", "description": "Peso em kg" },
+        "height": { "type": "number", "description": "Altura em cm" },
+        "activityFactor": { "type": "number", "description": "Fator de atividade física" },
+        "medicalHistory": { "type": "string", "description": "Histórico médico relevante" },
+        "allergies": { "type": "string", "description": "Alergias alimentares" },
+        "intolerances": { "type": "string", "description": "Intolerâncias alimentares" },
+        "goalType": { "type": "string", "enum": ["loss", "gain", "maintenance"], "description": "Objetivo do paciente" },
+        "goalKcal": { "type": "number", "description": "Valor do ajuste calórico" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Data de criação" }
+      },
+      "required": ["uid", "name", "age", "gender", "weight", "height", "activityFactor"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Dados do usuário e permissões",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "ID do usuário" },
+        "email": { "type": "string", "description": "E-mail do usuário" },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "Papel do usuário" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/patients/{patientId}": {
+      "schema": "Patient",
+      "description": "Coleção de perfis de pacientes"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Coleção de dados de usuários"
+    }
+  }
+}
